@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2103 · 生长纪 | 一中双语隆平学校小学部</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ink: #1a1a1a;
+    --paper: #f6f3ee;
+    --paper-deep: #ede8e0;
+    --soil: #5c4b3a;
+    --moss: #4a5d4e;
+    --accent: #b85c38;
+    --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+    --font-sans: "Inter", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html { scroll-behavior: auto; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  /* ---------- 光标 ---------- */
+  .cursor-dot {
+    position: fixed; top: 0; left: 0;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10000;
+    transform: translate(-50%, -50%);
+    transition: width .3s var(--ease-out), height .3s var(--ease-out), background .3s;
+  }
+  .cursor-ring {
+    position: fixed; top: 0; left: 0;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(26,26,26,0.25);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width .4s var(--ease-out), height .4s var(--ease-out), border-color .4s;
+  }
+  body.cursor-grow .cursor-dot { width: 12px; height: 12px; background: var(--soil); }
+  body.cursor-grow .cursor-ring { width: 64px; height: 64px; border-color: rgba(92,75,58,0.35); }
+
+  /* ---------- 预加载 ---------- */
+  .preloader {
+    position: fixed; inset: 0;
+    z-index: 20000;
+    background: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .preloader-mark {
+    font-family: var(--font-serif);
+    font-size: clamp(3rem, 8vw, 5rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  .preloader-line {
+    width: 0; height: 1px;
+    background: var(--ink);
+    opacity: 0.3;
+  }
+  .preloader.is-done .preloader-mark { animation: plFadeUp .8s var(--ease-out) forwards; }
+  .preloader.is-done .preloader-line { animation: plLine 1s var(--ease-out) .2s forwards; }
+  @keyframes plFadeUp { to { opacity: 1; transform: translateY(0); } }
+  @keyframes plLine { to { width: 180px; } }
+
+  /* ---------- 导航 ---------- */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px clamp(24px, 5vw, 72px);
+    mix-blend-mode: difference;
+    color: #fff;
+    pointer-events: none;
+  }
+  .nav > * { pointer-events: auto; }
+  .nav-brand {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    color: inherit;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    text-decoration: none;
+    color: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    position: relative;
+    padding-bottom: 4px;
+  }
+  .nav-links a::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform .5s var(--ease-out);
+  }
+  .nav-links a:hover::after { transform: scaleX(1); transform-origin: left; }
+
+  /* ---------- 首屏 ---------- */
+  .hero {
+    min-height: 100vh;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    padding: 0 clamp(24px, 5vw, 72px) clamp(48px, 10vh, 120px);
+    overflow: hidden;
+  }
+  .hero-inner {
+    grid-column: 1 / -1;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(16px, 3vh, 32px);
+  }
+  .hero-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--soil);
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  .hero-title {
+    font-family: var(--font-serif);
+    font-size: clamp(3.6rem, 11vw, 9rem);
+    font-weight: 500;
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    color: var(--ink);
+    max-width: 12ch;
+  }
+  .hero-title .line { display: block; overflow: hidden; }
+  .hero-title .line span {
+    display: block;
+    transform: translateY(110%);
+    will-change: transform;
+  }
+  .hero-title .accent { color: var(--accent); font-style: italic; }
+  .hero-meta {
+    display: flex;
+    gap: clamp(24px, 5vw, 80px);
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: clamp(16px, 4vh, 40px);
+  }
+  .hero-meta-item { opacity: 0; transform: translateY(16px); }
+  .hero-meta-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--soil);
+    margin-bottom: 6px;
+  }
+  .hero-meta-value {
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: var(--ink);
+  }
+  .hero-visual {
+    position: absolute;
+    right: clamp(24px, 5vw, 72px);
+    top: 18vh;
+    width: clamp(200px, 26vw, 380px);
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    z-index: 1;
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  .hero-visual img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.12);
+    will-change: transform;
+  }
+  .scroll-hint {
+    position: absolute;
+    bottom: clamp(24px, 4vh, 48px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+  }
+  .scroll-hint span {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--soil);
+  }
+  .scroll-hint-line {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--soil), transparent);
+    animation: scrollPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.6); transform-origin: top; }
+    50% { opacity: 1; transform: scaleY(1); transform-origin: top; }
+  }
+
+  /* ---------- 跑马灯 ---------- */
+  .marquee-section {
+    padding: clamp(40px, 8vh, 80px) 0;
+    border-top: 1px solid rgba(26,26,26,0.08);
+    border-bottom: 1px solid rgba(26,26,26,0.08);
+    overflow: hidden;
+    background: var(--paper-deep);
+  }
+  .marquee-track { display: flex; white-space: nowrap; will-change: transform; }
+  .marquee-content {
+    display: flex;
+    align-items: center;
+    gap: clamp(32px, 6vw, 80px);
+    padding-right: clamp(32px, 6vw, 80px);
+    font-family: var(--font-serif);
+    font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .marquee-content .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .marquee-content .outline {
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(26,26,26,0.3);
+  }
+
+  /* ---------- 通用章节 ---------- */
+  .section {
+    padding: clamp(80px, 16vh, 200px) clamp(24px, 5vw, 72px);
+    position: relative;
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    margin-bottom: clamp(48px, 10vh, 100px);
+  }
+  .section-index {
+    font-family: var(--font-serif);
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .section-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 4.5vw, 3.2rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  .section-desc {
+    max-width: 38ch;
+    font-size: 0.9rem;
+    line-height: 1.9;
+    color: var(--soil);
+    margin-left: auto;
+    text-align: right;
+  }
+
+  /* ---------- 老师网格 ---------- */
+  .teachers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: rgba(26,26,26,0.1);
+    border: 1px solid rgba(26,26,26,0.1);
+  }
+  .teacher-card {
+    background: var(--paper);
+    padding: clamp(32px, 5vh, 56px) clamp(24px, 3vw, 40px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: background .5s var(--ease-out);
+    min-height: 320px;
+  }
+  .teacher-card:hover { background: var(--paper-deep); }
+  .teacher-num {
+    font-family: var(--font-serif);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .teacher-name {
+    font-family: var(--font-serif);
+    font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .teacher-role {
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    color: var(--soil);
+    text-transform: uppercase;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(26,26,26,0.08);
+  }
+  .teacher-role .sep { color: var(--accent); margin: 0 6px; }
+  .teacher-note {
+    font-size: 0.82rem;
+    line-height: 1.9;
+    color: #555;
+    margin-top: auto;
+  }
+  .teacher-note strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ---------- 照片行 ---------- */
+  .photo-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(16px, 3vw, 40px);
+    margin-top: clamp(60px, 12vh, 120px);
+  }
+  .photo-row figure {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4 / 5;
+    margin: 0;
+  }
+  .photo-row figure img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.15);
+    will-change: transform;
+  }
+  .photo-row figure::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(26,26,26,0.2), transparent 45%);
+    pointer-events: none;
+  }
+  .photo-row figcaption {
+    position: absolute;
+    bottom: 18px; left: 18px;
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.85);
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  /* ---------- 数据条 ---------- */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: rgba(26,26,26,0.08);
+    border: 1px solid rgba(26,26,26,0.08);
+    margin-top: clamp(60px, 12vh, 120px);
+  }
+  .stat-cell {
+    background: var(--paper);
+    padding: clamp(28px, 5vh, 48px) clamp(20px, 3vw, 36px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .stat-number {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .stat-number .suffix {
+    font-size: 0.5em;
+    color: var(--accent);
+    margin-left: 2px;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--soil);
+    text-transform: uppercase;
+  }
+
+  /* ---------- 引语 ---------- */
+  .quote-section {
+    padding: clamp(100px, 22vh, 280px) clamp(24px, 8vw, 160px);
+    background: var(--ink);
+    color: var(--paper);
+    position: relative;
+    overflow: hidden;
+  }
+  .quote-section::before {
+    content: "\201C";
+    position: absolute;
+    top: 10%;
+    left: clamp(24px, 5vw, 72px);
+    font-family: var(--font-serif);
+    font-size: clamp(8rem, 20vw, 18rem);
+    line-height: 1;
+    color: rgba(246,243,238,0.06);
+    pointer-events: none;
+  }
+  .quote-text {
+    font-family: var(--font-serif);
+    font-size: clamp(1.5rem, 4.5vw, 3.4rem);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+    max-width: 22ch;
+    position: relative;
+    z-index: 1;
+  }
+  .quote-text em { font-style: italic; color: var(--accent); }
+  .quote-attribution {
+    margin-top: 48px;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(246,243,238,0.5);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---------- 页脚 ---------- */
+  .footer {
+    padding: clamp(60px, 10vh, 120px) clamp(24px, 5vw, 72px) clamp(32px, 5vh, 64px);
+    background: var(--paper-deep);
+  }
+  .footer-top {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: clamp(32px, 6vw, 80px);
+    padding-bottom: clamp(48px, 8vh, 80px);
+    border-bottom: 1px solid rgba(26,26,26,0.1);
+  }
+  .footer-brand {
+    font-family: var(--font-serif);
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.3;
+    max-width: 16ch;
+  }
+  .footer-brand span { color: var(--accent); }
+  .footer-col h4 {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--soil);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .footer-col p, .footer-col a {
+    display: block;
+    font-size: 0.85rem;
+    line-height: 2;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .footer-col a:hover { color: var(--accent); }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: clamp(24px, 4vh, 40px);
+    font-size: 0.72rem;
+    color: var(--soil);
+    letter-spacing: 0.05em;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* ---------- 显现 ---------- */
+  .reveal { opacity: 0; transform: translateY(40px); will-change: transform, opacity; }
+
+  /* ---------- 移动端 ---------- */
+  @media (max-width: 900px) {
+    body { cursor: auto; }
+    .cursor-dot, .cursor-ring { display: none; }
+
+    .nav { mix-blend-mode: normal; color: var(--ink); padding: 20px 24px; }
+    .nav-links { gap: 20px; }
+    .nav-links a { font-size: 0.68rem; }
+
+    .hero {
+      grid-template-columns: 1fr;
+      padding-bottom: 80px;
+      align-items: center;
+    }
+    .hero-visual {
+      position: relative;
+      right: auto; top: auto;
+      width: 70%;
+      margin: 0 auto 40px;
+      order: -1;
+    }
+    .hero-meta { gap: 24px; }
+    .hero-title { font-size: clamp(3rem, 14vw, 5rem); }
+
+    .section-head {
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .section-desc { text-align: left; margin-left: 0; }
+
+    .teachers-grid { grid-template-columns: 1fr; }
+    .teacher-card { min-height: auto; }
+    .photo-row { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr; }
+
+    .footer-top { grid-template-columns: 1fr; gap: 40px; }
+    .footer-bottom { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; }
+    .hero-visual { opacity: 1; clip-path: none; }
+    .preloader { display: none; }
+    .marquee-track { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="preloader" id="preloader">
+  <div class="preloader-mark">2103</div>
+  <div class="preloader-line"></div>
+</div>
+
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav class="nav">
+  <a href="#" class="nav-brand">2103</a>
+  <ul class="nav-links">
+    <li><a href="#teachers">老师</a></li>
+    <li><a href="#moments">影像</a></li>
+    <li><a href="#about">关于</a></li>
+  </ul>
+</nav>
+
+<!-- 首屏 -->
+<header class="hero">
+  <div class="hero-visual" id="heroVisual">
+    <img src="https://uuimg.com/uploads/20260911/4bbc0d7daaa3be72938e7ff73da6a082.jpeg" alt="2103班大合照">
+  </div>
+  <div class="hero-inner">
+    <p class="hero-kicker" id="heroKicker">长沙市芙蓉区一中双语隆平学校小学部</p>
+    <h1 class="hero-title" id="heroTitle">
+      <span class="line"><span>生长纪</span></span>
+      <span class="line"><span>2103 <em class="accent">·</em> 六三班</span></span>
+    </h1>
+    <div class="hero-meta">
+      <div class="hero-meta-item" id="meta1">
+        <div class="hero-meta-label">班级</div>
+        <div class="hero-meta-value">2103 班（六三班）</div>
+      </div>
+      <div class="hero-meta-item" id="meta2">
+        <div class="hero-meta-label">学校</div>
+        <div class="hero-meta-value">一中双语隆平学校 · 小学部</div>
+      </div>
+      <div class="hero-meta-item" id="meta3">
+        <div class="hero-meta-label">坐标</div>
+        <div class="hero-meta-value">长沙 · 芙蓉区 · 望龙路</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint" id="scrollHint">
+    <span>往下</span>
+    <div class="scroll-hint-line"></div>
+  </div>
+</header>
+
+<!-- 跑马灯 -->
+<section class="marquee-section">
+  <div class="marquee-track" id="marqueeTrack">
+    <div class="marquee-content">
+      <span>2103</span>
+      <span class="dot"></span>
+      <span class="outline">六三班</span>
+      <span class="dot"></span>
+      <span>一中双语隆平学校</span>
+      <span class="dot"></span>
+      <span class="outline">生长纪</span>
+      <span class="dot"></span>
+      <span>2020 — 2026</span>
+      <span class="dot"></span>
+      <span class="outline">隆平少年</span>
+      <span class="dot"></span>
+    </div>
+    <div class="marquee-content" aria-hidden="true">
+      <span>2103</span>
+      <span class="dot"></span>
+      <span class="outline">六三班</span>
+      <span class="dot"></span>
+      <span>一中双语隆平学校</span>
+      <span class="dot"></span>
+      <span class="outline">生长纪</span>
+      <span class="dot"></span>
+      <span>2020 — 2026</span>
+      <span class="dot"></span>
+      <span class="outline">隆平少年</span>
+      <span class="dot"></span>
+    </div>
+  </div>
+</section>
+
+<!-- 老师 -->
+<section class="section" id="teachers">
+  <div class="section-head reveal">
+    <span class="section-index">01</span>
+    <h2 class="section-title">陪我们走过六年的人</h2>
+    <p class="section-desc">一间教室，六个学年，四位老师。有人从一年级就在，有人从二年级接棒，有人一直站在讲台上。</p>
+  </div>
+
+  <div class="teachers-grid reveal">
+    <article class="teacher-card">
+      <span class="teacher-num">01</span>
+      <h3 class="teacher-name">钟诗佳</h3>
+      <div class="teacher-role">语文<span class="sep">·</span>班主任</div>
+      <p class="teacher-note">二年级起接手 2103 班，从 <strong>邓佳倩</strong> 老师手中接过语文课和班主任的担子，一直带到毕业。</p>
+    </article>
+
+    <article class="teacher-card">
+      <span class="teacher-num">02</span>
+      <h3 class="teacher-name">蒋琪</h3>
+      <div class="teacher-role">数学</div>
+      <p class="teacher-note">黑板上的算式换过很多种，解题的思路却一直是他讲的那套。</p>
+    </article>
+
+    <article class="teacher-card">
+      <span class="teacher-num">03</span>
+      <h3 class="teacher-name">罗艳</h3>
+      <div class="teacher-role">英语</div>
+      <p class="teacher-note">从字母到对话，六年里念过的每一个单词，都有她的声音。</p>
+    </article>
+  </div>
+
+  <!-- 影像 -->
+  <div class="photo-row" id="moments">
+    <figure data-parallax="0.1">
+      <img src="https://uuimg.com/uploads/20260911/b16bd82dcd8c83a1f8aa5beeb91de946.jpeg" alt="2103班合影">
+      <figcaption>2103 · 在一起</figcaption>
+    </figure>
+    <figure data-parallax="0.1">
+      <img src="https://uuimg.com/uploads/20260911/aa670abbe34e4e82a135c4093e1272c4.jpeg" alt="2103班合影">
+      <figcaption>2103 · 六年级</figcaption>
+    </figure>
+  </div>
+
+  <div class="stats-row reveal">
+    <div class="stat-cell">
+      <div class="stat-number" data-count="6">0<span class="suffix">年</span></div>
+      <div class="stat-label">共同成长</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-number" data-count="44">0<span class="suffix">人</span></div>
+      <div class="stat-label">班级成员</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-number" data-count="2103">0</div>
+      <div class="stat-label">我们的暗号</div>
+    </div>
+  </div>
+</section>
+
+<!-- 引语 -->
+<section class="quote-section" id="about">
+  <p class="quote-text reveal">大自然是最好的老师，而你们是<em>最好的答案</em>。</p>
+  <p class="quote-attribution reveal">2103 班 · 六三班 · 2026</p>
+</section>
+
+<!-- 页脚 -->
+<footer class="footer">
+  <div class="footer-top">
+    <div class="footer-brand">长沙市芙蓉区一中双语隆平学校小学部 <span>2103</span> 班</div>
+    <div class="footer-col">
+      <h4>地址</h4>
+      <p>长沙市芙蓉区东岸街道望龙路 191 号</p>
+    </div>
+    <div class="footer-col">
+      <h4>关于</h4>
+      <p>班级主页 · 生长纪</p>
+      <p>2026 届 六三班</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2103 班 · 生长纪</span>
+    <span>一粒种子，六年光阴</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prefersReduced) {
+    document.getElementById("preloader").style.display = "none";
+    document.querySelectorAll(".reveal, .hero-visual, .hero-kicker, .hero-meta-item, .scroll-hint").forEach(function (el) {
+      el.style.opacity = "1";
+      el.style.transform = "none";
+      el.style.clipPath = "none";
+    });
+    return;
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ---------- 预加载 ---------- */
+  const preloader = document.getElementById("preloader");
+  window.addEventListener("load", function () {
+    preloader.classList.add("is-done");
+    setTimeout(function () {
+      gsap.to(preloader, {
+        opacity: 0,
+        duration: 0.6,
+        ease: "power2.out",
+        onComplete: function () {
+          preloader.style.display = "none";
+          initHero();
+        }
+      });
+    }, 1200);
+  });
+
+  /* ---------- 首屏 ---------- */
+  function initHero() {
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+    tl.to(".hero-title .line span", { y: 0, duration: 1.1, stagger: 0.12 }, 0);
+    tl.to("#heroKicker", { opacity: 1, y: 0, duration: 0.8 }, 0.5);
+    tl.to("#heroVisual", {
+      opacity: 1,
+      clipPath: "inset(0 0 0% 0)",
+      duration: 1.4,
+      ease: "power3.inOut"
+    }, 0.3);
+    tl.to("#heroVisual img", { scale: 1, duration: 1.8, ease: "power3.out" }, 0.3);
+    tl.to(["#meta1", "#meta2", "#meta3"], { opacity: 1, y: 0, duration: 0.7, stagger: 0.1 }, 0.8);
+    tl.to("#scrollHint", { opacity: 1, duration: 0.6 }, 1.4);
+
+    gsap.to("#heroVisual img", {
+      y: "18%",
+      ease: "none",
+      scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 }
+    });
+    gsap.to("#heroVisual", {
+      y: -40,
+      ease: "none",
+      scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1.5 }
+    });
+  }
+
+  /* ---------- 跑马灯 ---------- */
+  const marqueeTrack = document.getElementById("marqueeTrack");
+  if (marqueeTrack) {
+    const totalWidth = marqueeTrack.scrollWidth / 2;
+    gsap.to(marqueeTrack, {
+      x: -totalWidth,
+      duration: totalWidth / 60,
+      ease: "none",
+      repeat: -1
+    });
+  }
+
+  /* ---------- 显现 ---------- */
+  gsap.utils.toArray(".reveal").forEach(function (el) {
+    gsap.to(el, {
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      ease: "power3.out",
+      scrollTrigger: { trigger: el, start: "top 85%", toggleActions: "play none none none" }
+    });
+  });
+
+  /* ---------- 视差 ---------- */
+  gsap.utils.toArray("[data-parallax]").forEach(function (figure) {
+    const img = figure.querySelector("img");
+    if (!img) return;
+    const speed = parseFloat(figure.getAttribute("data-parallax")) || 0.1;
+    gsap.fromTo(img,
+      { y: "-" + (speed * 100) + "%" },
+      {
+        y: (speed * 100) + "%",
+        ease: "none",
+        scrollTrigger: { trigger: figure, start: "top bottom", end: "bottom top", scrub: 1 }
+      }
+    );
+  });
+
+  /* ---------- 计数 ---------- */
+  gsap.utils.toArray("[data-count]").forEach(function (el) {
+    const target = parseInt(el.getAttribute("data-count"), 10);
+    const obj = { val: 0 };
+    ScrollTrigger.create({
+      trigger: el,
+      start: "top 90%",
+      once: true,
+      onEnter: function () {
+        gsap.to(obj, {
+          val: target,
+          duration: 1.6,
+          ease: "power2.out",
+          onUpdate: function () {
+            el.childNodes[0].nodeValue = Math.round(obj.val);
+          }
+        });
+      }
+    });
+  });
+
+  /* ---------- 标题高光 ---------- */
+  gsap.utils.toArray(".section-title").forEach(function (title) {
+    gsap.from(title, {
+      clipPath: "inset(0 100% 0 0)",
+      duration: 1.2,
+      ease: "power3.inOut",
+      scrollTrigger: { trigger: title, start: "top 85%" }
+    });
+  });
+
+  /* ---------- 光标 ---------- */
+  var dot = document.getElementById("cursorDot");
+  var ring = document.getElementById("cursorRing");
+  var mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+  if (dot && ring && window.matchMedia("(pointer: fine)").matches) {
+    window.addEventListener("mousemove", function (e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      dot.style.left = mouseX + "px";
+      dot.style.top = mouseY + "px";
+    });
+
+    (function renderRing() {
+      ringX += (mouseX - ringX) * 0.16;
+      ringY += (mouseY - ringY) * 0.16;
+      ring.style.left = ringX + "px";
+      ring.style.top = ringY + "px";
+      requestAnimationFrame(renderRing);
+    })();
+
+    var interactive = "a, button, .stat-cell, .teacher-card, .photo-row figure, .nav-links a";
+    document.querySelectorAll(interactive).forEach(function (el) {
+      el.addEventListener("mouseenter", function () { document.body.classList.add("cursor-grow"); });
+      el.addEventListener("mouseleave", function () { document.body.classList.remove("cursor-grow"); });
+    });
+  }
+
+  /* ---------- resize ---------- */
+  var resizeTimer;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { ScrollTrigger.refresh(); }, 200);
+  });
+
+})();
+</script>
+</body>
+</html>
