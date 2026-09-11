@@ -362,6 +362,71 @@
     font-weight: 500;
   }
 
+  /* ---------- 学生名单 ---------- */
+  .students-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: rgba(26,26,26,0.08);
+    border: 1px solid rgba(26,26,26,0.08);
+  }
+  .student {
+    background: var(--paper);
+    padding: clamp(16px, 2.2vw, 24px) clamp(16px, 2.4vw, 28px);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    transition: background .4s var(--ease-out);
+    will-change: background;
+  }
+  .student:hover { background: var(--paper-deep); }
+  .student-num {
+    font-family: var(--font-serif);
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    min-width: 22px;
+    flex-shrink: 0;
+  }
+  .student-name {
+    font-family: var(--font-serif);
+    font-size: 0.98rem;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+  }
+  .student.transferred .student-name,
+  .student.transferred .student-num {
+    color: var(--soil);
+    opacity: 0.55;
+  }
+  .student.transferred {
+    background: var(--paper-deep);
+  }
+  .student-tag {
+    margin-left: auto;
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    color: var(--soil);
+    opacity: 0.55;
+    flex-shrink: 0;
+  }
+  .student.newcomer .student-tag {
+    color: var(--moss);
+    opacity: 0.75;
+  }
+  .students-note {
+    margin-top: 24px;
+    font-size: 0.76rem;
+    line-height: 1.9;
+    letter-spacing: 0.06em;
+    color: var(--soil);
+    text-align: right;
+  }
+  .students-note span {
+    color: var(--accent);
+  }
+
   /* ---------- 照片行 ---------- */
   .photo-row {
     display: grid;
@@ -528,13 +593,17 @@
   .reveal { opacity: 0; transform: translateY(40px); will-change: transform, opacity; }
 
   /* ---------- 移动端 ---------- */
+  @media (max-width: 1024px) {
+    .students-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
   @media (max-width: 900px) {
     body { cursor: auto; }
     .cursor-dot, .cursor-ring { display: none; }
 
     .nav { mix-blend-mode: normal; color: var(--ink); padding: 20px 24px; }
-    .nav-links { gap: 20px; }
-    .nav-links a { font-size: 0.68rem; }
+    .nav-links { gap: 18px; }
+    .nav-links a { font-size: 0.66rem; }
 
     .hero {
       grid-template-columns: 1fr;
@@ -567,6 +636,14 @@
     .footer-bottom { flex-direction: column; align-items: flex-start; }
   }
 
+  @media (max-width: 600px) {
+    .students-grid { grid-template-columns: repeat(2, 1fr); }
+    .student { padding: 14px 16px; gap: 10px; }
+    .student-name { font-size: 0.9rem; }
+    .student-tag { font-size: 0.52rem; }
+    .students-note { text-align: left; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .reveal { opacity: 1; transform: none; }
     .hero-visual { opacity: 1; clip-path: none; }
@@ -589,6 +666,7 @@
   <a href="#" class="nav-brand">2103</a>
   <ul class="nav-links">
     <li><a href="#teachers">老师</a></li>
+    <li><a href="#students">同学</a></li>
     <li><a href="#moments">影像</a></li>
     <li><a href="#about">关于</a></li>
   </ul>
@@ -665,7 +743,7 @@
   <div class="section-head reveal">
     <span class="section-index">01</span>
     <h2 class="section-title">陪我们走过六年的人</h2>
-    <p class="section-desc">一间教室，六个学年，四位老师。有人从一年级就在，有人从二年级接棒，有人一直站在讲台上。</p>
+    <p class="section-desc">一间教室，六个学年，三位老师。有人从二年级接棒，有人一直站在讲台上。</p>
   </div>
 
   <div class="teachers-grid reveal">
@@ -680,7 +758,7 @@
       <span class="teacher-num">02</span>
       <h3 class="teacher-name">蒋琪</h3>
       <div class="teacher-role">数学</div>
-      <p class="teacher-note">黑板上的算式换过很多种，解题的思路却一直是他讲的那套。</p>
+      <p class="teacher-note">黑板上的算式换过很多种，解题的思路却一直是她讲的那套。</p>
     </article>
 
     <article class="teacher-card">
@@ -690,6 +768,18 @@
       <p class="teacher-note">从字母到对话，六年里念过的每一个单词，都有她的声音。</p>
     </article>
   </div>
+</section>
+
+<!-- 学生名单 -->
+<section class="section" id="students">
+  <div class="section-head reveal">
+    <span class="section-index">02</span>
+    <h2 class="section-title">2103 的每一个人</h2>
+    <p class="section-desc">44 个名字，44 种样子。按学号排列，不分先后。</p>
+  </div>
+
+  <div class="students-grid" id="studentsGrid"></div>
+  <p class="students-note reveal">罗璟兮同学于四年级升五年级时转学，12 号学号由张文轩同学接续。</p>
 
   <!-- 影像 -->
   <div class="photo-row" id="moments">
@@ -752,10 +842,74 @@
 (function () {
   "use strict";
 
-  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* ---------- 学生名单数据 ---------- */
+  var students = [
+    { num: 1,  name: "刘秋熠" },
+    { num: 2,  name: "刘承希" },
+    { num: 3,  name: "周凡博" },
+    { num: 4,  name: "颜佳浩" },
+    { num: 5,  name: "言墨轩" },
+    { num: 6,  name: "李林希" },
+    { num: 7,  name: "王晨翊" },
+    { num: 8,  name: "邓文奕" },
+    { num: 9,  name: "邓佳荣" },
+    { num: 10, name: "路朝麒" },
+    { num: 11, name: "张晨曦" },
+    { num: 12, name: "张文轩", tag: "插班", newcomer: true },
+    { num: 13, name: "马建坤" },
+    { num: 14, name: "谢宇轩" },
+    { num: 15, name: "罗钟毓" },
+    { num: 16, name: "刘睿铭" },
+    { num: 17, name: "陈坤润" },
+    { num: 18, name: "罗梦溪" },
+    { num: 19, name: "蒋昕霓" },
+    { num: 20, name: "徐晟洁" },
+    { num: 21, name: "朱雨娇" },
+    { num: 22, name: "潘扬洋" },
+    { num: 23, name: "侯媛馨" },
+    { num: 24, name: "刘雅卿" },
+    { num: 25, name: "郑惜苗" },
+    { num: 26, name: "胡芷宁" },
+    { num: 27, name: "梁紫萱" },
+    { num: 28, name: "刘语晨" },
+    { num: 29, name: "周雅萍" },
+    { num: 30, name: "赵蔓青" },
+    { num: 31, name: "钟忆童" },
+    { num: 32, name: "刘欣诣" },
+    { num: 33, name: "罗晨曦" },
+    { num: 34, name: "龚诗琪" },
+    { num: 35, name: "章芯晨" },
+    { num: 36, name: "李紫菡" },
+    { num: 37, name: "刘梓轩" },
+    { num: 38, name: "周梓晨" },
+    { num: 39, name: "付梓菡" },
+    { num: 40, name: "陈鸿锦" },
+    { num: 41, name: "雷渊荃" },
+    { num: 42, name: "谢雨琪" },
+    { num: 43, name: "曾泓译" },
+    { num: 44, name: "胡乐梓阳" },
+    { num: 45, name: "孙逸平" }
+  ];
+
+  var grid = document.getElementById("studentsGrid");
+  if (grid) {
+    students.forEach(function (s) {
+      var el = document.createElement("div");
+      el.className = "student" + (s.newcomer ? " newcomer" : "") + (s.transferred ? " transferred" : "");
+      var numStr = s.num < 10 ? "0" + s.num : "" + s.num;
+      var html = '<span class="student-num">' + numStr + '</span><span class="student-name">' + s.name + '</span>';
+      if (s.tag) {
+        html += '<span class="student-tag">' + s.tag + '</span>';
+      }
+      el.innerHTML = html;
+      grid.appendChild(el);
+    });
+  }
+
+  var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (prefersReduced) {
     document.getElementById("preloader").style.display = "none";
-    document.querySelectorAll(".reveal, .hero-visual, .hero-kicker, .hero-meta-item, .scroll-hint").forEach(function (el) {
+    document.querySelectorAll(".reveal, .hero-visual, .hero-kicker, .hero-meta-item, .scroll-hint, .student").forEach(function (el) {
       el.style.opacity = "1";
       el.style.transform = "none";
       el.style.clipPath = "none";
@@ -766,7 +920,7 @@
   gsap.registerPlugin(ScrollTrigger);
 
   /* ---------- 预加载 ---------- */
-  const preloader = document.getElementById("preloader");
+  var preloader = document.getElementById("preloader");
   window.addEventListener("load", function () {
     preloader.classList.add("is-done");
     setTimeout(function () {
@@ -784,7 +938,7 @@
 
   /* ---------- 首屏 ---------- */
   function initHero() {
-    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    var tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
     tl.to(".hero-title .line span", { y: 0, duration: 1.1, stagger: 0.12 }, 0);
     tl.to("#heroKicker", { opacity: 1, y: 0, duration: 0.8 }, 0.5);
@@ -811,9 +965,9 @@
   }
 
   /* ---------- 跑马灯 ---------- */
-  const marqueeTrack = document.getElementById("marqueeTrack");
+  var marqueeTrack = document.getElementById("marqueeTrack");
   if (marqueeTrack) {
-    const totalWidth = marqueeTrack.scrollWidth / 2;
+    var totalWidth = marqueeTrack.scrollWidth / 2;
     gsap.to(marqueeTrack, {
       x: -totalWidth,
       duration: totalWidth / 60,
@@ -833,11 +987,24 @@
     });
   });
 
+  /* ---------- 学生名单逐个浮现 ---------- */
+  gsap.from(".student", {
+    opacity: 0,
+    y: 18,
+    duration: 0.55,
+    stagger: 0.018,
+    ease: "power2.out",
+    scrollTrigger: {
+      trigger: "#studentsGrid",
+      start: "top 82%"
+    }
+  });
+
   /* ---------- 视差 ---------- */
   gsap.utils.toArray("[data-parallax]").forEach(function (figure) {
-    const img = figure.querySelector("img");
+    var img = figure.querySelector("img");
     if (!img) return;
-    const speed = parseFloat(figure.getAttribute("data-parallax")) || 0.1;
+    var speed = parseFloat(figure.getAttribute("data-parallax")) || 0.1;
     gsap.fromTo(img,
       { y: "-" + (speed * 100) + "%" },
       {
@@ -850,8 +1017,8 @@
 
   /* ---------- 计数 ---------- */
   gsap.utils.toArray("[data-count]").forEach(function (el) {
-    const target = parseInt(el.getAttribute("data-count"), 10);
-    const obj = { val: 0 };
+    var target = parseInt(el.getAttribute("data-count"), 10);
+    var obj = { val: 0 };
     ScrollTrigger.create({
       trigger: el,
       start: "top 90%",
@@ -900,7 +1067,7 @@
       requestAnimationFrame(renderRing);
     })();
 
-    var interactive = "a, button, .stat-cell, .teacher-card, .photo-row figure, .nav-links a";
+    var interactive = "a, button, .stat-cell, .teacher-card, .student, .photo-row figure, .nav-links a";
     document.querySelectorAll(interactive).forEach(function (el) {
       el.addEventListener("mouseenter", function () { document.body.classList.add("cursor-grow"); });
       el.addEventListener("mouseleave", function () { document.body.classList.remove("cursor-grow"); });
